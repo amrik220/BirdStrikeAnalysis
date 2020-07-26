@@ -71,10 +71,12 @@ df <- data.frame(sapply(df, trimws)) # strip leading and trailing white spaces
 cat("Total number of incidents of bird strike: ", dim(df)[1])
 cat("Total number of attributes for a bird strike: ", dim(df)[2])
 
-# Fileter data from Jan 1990 to Apr 2020
+# Filter data from Jan 1990 to Apr 2020
 
 df <- df %>% filter(INCIDENT_YEAR >= 1990, INCIDENT_DATE <= '2020-04-30')
 dim(df)
+df <- type.convert(df, na.strings = c("NA", ''), as.is = TRUE, dec = ".", numerals = "no.loss")
+str(df)
 
 # check for missing values in columns
 sapply(df, function(x) sum(is.na(x)))
@@ -155,10 +157,10 @@ table(na.omit(df$AOS))
 length(na.omit(df$AOS))
 
 # COST_REPAIRS_INFL_ADJ	Costs adjusted for inflation
-sum(as.numeric(na.omit(df$COST_REPAIRS_INFL_ADJ)))
+sum(na.omit(df$COST_REPAIRS_INFL_ADJ))
 
 # COST_OTHER_INFL_ADJ	Other cost adjusted for inflation
-sum(as.numeric(na.omit(df$COST_OTHER_INFL_ADJ)))
+sum(na.omit(df$COST_OTHER_INFL_ADJ))
 
 # NR_INJURIES	Number of people injured
 table(df$NR_INJURIES)
