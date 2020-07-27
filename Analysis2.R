@@ -1,17 +1,10 @@
 # Author: Amrik Singh
-# Project Title: Analyzing Collisions between Birds and Aircraft in United States
+# Project Title: Analysis and visualisation of bird strikes in USA from Jan-1990 to Apr-2020
 # (FAA Wildlife Strike Database, from Jan-1990 to Apr-2020)
 
 #' Code Description: Data processing to explore, visualize, and analyze data
 #' File Name: Analysis2.R # Aircraft and Bird species
 #' For more information, please read  README.md included in the repository
-
-
-#' Note: This file is a part of data visulaization project titled "Analyzing 
-#' Collisions between Birds and aircraft in the United States (from 1990 to Mar, 2016)".
-#' 
-#' For more information, please read read_me.txt file included in the folder 
-#' 28086252_Amrik_Singh
 
 # Import required packages
 library(dplyr)

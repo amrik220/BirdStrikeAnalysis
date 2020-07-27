@@ -1,5 +1,5 @@
 # Author: Amrik Singh
-# Project Title: Analyzing Collisions between Birds and Aircraft in United States
+# Project Title: Analysis and visualisation of bird strikes in USA from Jan-1990 to Apr-2020
 # (FAA Wildlife Strike Database, from Jan-1990 to Apr-2020)
 
 #' Code Description:
