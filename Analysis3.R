@@ -3,7 +3,7 @@
 # (FAA Wildlife Strike Database, from 1990 to 2019)
 
 #' Code Description: Data processing to explore, visualize, and analyze data
-#' File Name: Analysis2.R # Airports and States
+#' File Name: Analysis3.R # Airports and States
 #' For more information, please read  README.md included in the repository
 
 # Import required packages
@@ -170,9 +170,6 @@ if(!dir.exists(file.path(getwd(), 'rds_data'))){
 saveRDS(phase, file="rds_data/phase.rds")
 
 ################################
-yearStart = 1990
-yearEnd = 2000
-phase %>% filter(Year >= yearStart, Year <= yearEnd)
 
 pha <- phase %>% group_by(Phase) %>% summarise(Number = sum(Number))
 pha <- as.data.frame(pha)

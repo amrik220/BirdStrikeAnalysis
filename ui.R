@@ -8,6 +8,8 @@ tab1 <- "Introduction"
 tab1Tspt1 <- "Problem Description"
 tab1Tspt2 <- "Impact on economy and human life"
 tab1Tspt3 <- "About the data"
+tab2 <- "Bird Strike"
+tab2Tspt1 <- "Frequency of bird strike per month"
 
 # Define UI ----
 ui <- navbarPage("", id = "Home", collapsible = TRUE, fluid = TRUE, theme = shinytheme("cerulean"),
@@ -24,13 +26,9 @@ ui <- navbarPage("", id = "Home", collapsible = TRUE, fluid = TRUE, theme = shin
                                        h2(tab1Tspt1, align = "center",
                                           style = "font-size:18px; padding-left:10px; padding-right:10px"),
                                        
-                                       div(plotOutput("plot3"), align = "center"),
+                                       div(plotOutput("pic1"), align = 'center'),
                                        introPara1(),
                                        introPara2(),
-                                       fluidPage(picture()),
-                                       fluidPage(picture()),
-                                       picture()
-                                       
                                        ),
                               tabPanel(tab1Tspt2, value = '#tab1Tspt2'
                                        ),
@@ -39,10 +37,10 @@ ui <- navbarPage("", id = "Home", collapsible = TRUE, fluid = TRUE, theme = shin
                           )
                  ), # end of Background tab
                  
-                 tabPanel("Bird Strike", icon = icon("dove", lib = "font-awesome"),
+                 tabPanel(tab2, id = 'tab2', icon = icon("dove", lib = "font-awesome"),
                           fluidPage(
-                            tabsetPanel(
-                              tabPanel("Frequency of bird strike per month",
+                            tabsetPanel(id = 'tab2Tsp', selected = '#tab2Tspt1',
+                              tabPanel(tab2Tspt1, value = '#tab2Tspt1',
                                        
                                        # Sidebar layout with input and output definitions ----
                                        sidebarLayout(position = "right", fluid = "TRUE",
@@ -129,7 +127,6 @@ ui <- navbarPage("", id = "Home", collapsible = TRUE, fluid = TRUE, theme = shin
                           fluidPage(
                             tabsetPanel(
                               tabPanel("Most common bird species involved in",
-                                       # plotOutput("plot3")
                                        ),
                               tabPanel("Size of birds"),
                               tabPanel("Relationship between bird size, aircraft size, and amount of damage")

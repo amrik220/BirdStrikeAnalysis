@@ -91,11 +91,11 @@ pointOfImpact$lodPer <- round(colSums(lod)/sum(colSums(lod))*100,2)
 pointOfImpact$damPer <- round(pointOfImpact$lodNum/pointOfImpact$num*100,2)
 
 pointOfImpact
-
+sum(pointOfImpact$num)
 # main plot for final visualization
 ay <- list(overlaying = "y", side = 'right', title = 'Percentage of cases resulted in damage')
 p1 <- plot_ly(pointOfImpact, x = ~poi, y = ~num, type = 'bar',
-             text = ~num, textposition = 'outside',
+             text = ~num, textposition = 'outside', hoverinfo = 'y',
              name = 'Point of impact', offsetgroup = 1) %>%
   add_trace(y = ~lodNum, name = 'Number of cases resulted in damage',
             text = ~lodNum, textposition = 'outside', offsetgroup = 2) %>%
@@ -112,8 +112,8 @@ print(p1)
 if(!dir.exists(file.path(getwd(), 'rds_data'))){
   dir.create(file.path(getwd(), 'rds_data'))}
 saveRDS(pointOfImpact, file="rds_data/pointOfImpact.rds")
-
-getwd()
+saveRDS(poi, file="rds_data/poi.rds")
+saveRDS(lod, file="rds_data/lod.rds")
 
 ##########################################################################################
 ####################                  Trend Lines                       ##################
