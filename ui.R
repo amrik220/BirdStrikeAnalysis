@@ -2,15 +2,20 @@ library(shiny)
 library(shinythemes)
 
 # Define UI ----
-ui <- navbarPage('', collapsible = TRUE,
-                 fluid = TRUE, theme = shinytheme("united"), selected = "Bird Strike",
-                 header = h4("Analysis and visualisation of bird strikes in USA from Jan-1990 to Apr-2020",
-                             style = "color: Black;", align = "center"),
+ui <- navbarPage('', collapsible = TRUE, fluid = TRUE, theme = shinytheme("united"),
+                 selected = "Bird Strike",
+                 header = h1("Analysis and visualisation of bird strikes in USA from Jan-1990 to Apr-2020",
+                             style = "color: Black;", align = "center", style = "font-size:30px"),
                  
                  tabPanel("Background",icon = icon("history", lib = "font-awesome"),
                           fluidPage(
                             tabsetPanel(
-                              tabPanel("Problem Description"),
+                              tabPanel("Problem Description"
+                                       
+                                       img(src = "birdStrike.png", height = 72, width = 72)
+                                       
+                                       
+                                       ),
                               tabPanel("Impact on economy and human life"),
                               tabPanel("About the data")
                             )

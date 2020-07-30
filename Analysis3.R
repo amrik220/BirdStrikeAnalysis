@@ -1,5 +1,5 @@
 # Author: Amrik Singh
-# Project Title: Analysis and visualisation of bird strikes in USA from Jan-1990 to Apr-2020
+# Project Title: Analysis of bird strikes reported in USA from Jan-1990 to Apr-2020
 # (FAA Wildlife Strike Database, from Jan-1990 to Apr-2020)
 
 #' Code Description: Data processing to explore, visualize, and analyze data
@@ -11,19 +11,13 @@ library(dplyr)
 library(ggplot2) 
 library(ggthemes)
 library(plotly)
-library("maps")
-# library(shiny)
-# library(shinythemes)
+# library("maps")
 # library(reshape2)
-# library(tm)
-# library(SnowballC)
-# library(wordcloud)
-# library(RColorBrewer)
 library(leaflet)
 
 setwd(choose.dir())
 # read data from birdStrikesAll.rds file.
-df <- readRDS("birdStrikesAll.rds")
+df <- readRDS("database/birdStrikesAll.rds")
 # df <- read.csv("birdStrikesAll.csv", strip.white = TRUE, na.strings = c("NA",""))
 
 ############### Information About airports, phase of the filght and effect on flight######
@@ -36,19 +30,20 @@ airports$Year <- df$INCIDENT_YEAR
 airports$Airport <- df$AIRPORT
 airports$Damage <- df$DAMAGE_LEVEL
 
-airports <- airports[airports$Year != 2020,]
-airports <- airports[complete.cases(airports),] # Remove NAs
-dim(airports)
-
-airport <- airports %>% group_by(Year, Airport, Damage) %>% 
+airportTab <- airports %>% group_by(Year, Airport, Damage) %>% 
   summarise(Number = n()) # group data
-airport <- as.data.frame(airport) # convert to dataframe
-head(airport)
+airportTab <- as.data.frame(airportTab) # convert to dataframe
+head(airportTab)
+sum(airportTab$Number)
+dim(airportTab)
 
-saveRDS(airport, file="rds_data/airport.rds")
+getwd()
+if(!dir.exists(file.path(getwd(), 'rds_data'))){
+  dir.create(file.path(getwd(), 'rds_data'))}
+# save result as .rds file
+saveRDS(airportTab, file="rds_data/airportTab.rds")
 
 # airport[airport$Damage %in% c("M", "M?", "S", "D"),]
-
 airports <- airport %>% group_by(Airport, Damage) %>% 
   summarise(Number_of_Incident = sum(Number))
 
@@ -73,14 +68,19 @@ for(i in 1:nrow(data)){
   data$Destroyed[i] <- 
     sum(airports$Number_of_Incident[airports$Airport == data$Airport[i] & airports$Damage == 'D'])
 }
-data <- data[data$Airport != 'UNKNOWN', ]
+# data <- data[data$Airport != 'UNKNOWN', ]
+airportTab[airportTab$Airport == 'UNKNOWN', ]
+
+
 data <- data[order(-data$Number_of_Incidents),]
 data <- data[order(data$Airport, decreasing=TRUE),] 
 data <- data[order(data$Airport),] 
 
 head(data)
 class(data)
+data[order(data$Number_of_Incidents, decreasing=TRUE),] 
 
+sum(data$Number_of_Incidents)
 
 ######## Effect on flight operations
 
