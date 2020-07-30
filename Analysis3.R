@@ -1,6 +1,6 @@
 # Author: Amrik Singh
-# Project Title: Analysis of bird strikes reported in USA from Jan-1990 to Apr-2020
-# (FAA Wildlife Strike Database, from Jan-1990 to Apr-2020)
+# Project Title: Analysis of bird strikes reported in USA from 1990 to 2019
+# (FAA Wildlife Strike Database, from 1990 to 2019)
 
 #' Code Description: Data processing to explore, visualize, and analyze data
 #' File Name: Analysis2.R # Airports and States
@@ -12,7 +12,7 @@ library(ggplot2)
 library(ggthemes)
 library(plotly)
 # library("maps")
-# library(reshape2)
+library(reshape2)
 library(leaflet)
 
 setwd(choose.dir())
@@ -20,142 +20,200 @@ setwd(choose.dir())
 df <- readRDS("database/birdStrikesAll.rds")
 # df <- read.csv("birdStrikesAll.csv", strip.white = TRUE, na.strings = c("NA",""))
 
-############### Information About airports, phase of the filght and effect on flight######
 
-airports <- data.frame(matrix(ncol = 3, nrow = nrow(df))) # create an empty dataframe
-colnames(airports) <- c('Year', 'Airport', 'Damage')
+##Information About airports, phase of the flight and effect on flight
+##@@@@@@@@@@@@@@@@@@ Airports
+airports <- df %>% select(AIRPORT, INCIDENT_YEAR, DAMAGE_LEVEL)
 head(airports)
 
-airports$Year <- df$INCIDENT_YEAR
-airports$Airport <- df$AIRPORT
-airports$Damage <- df$DAMAGE_LEVEL
-
-airportTab <- airports %>% group_by(Year, Airport, Damage) %>% 
+airports <- airports %>% group_by(AIRPORT, INCIDENT_YEAR, DAMAGE_LEVEL) %>% 
   summarise(Number = n()) # group data
-airportTab <- as.data.frame(airportTab) # convert to dataframe
-head(airportTab)
-sum(airportTab$Number)
-dim(airportTab)
+airports <- as.data.frame(airports) # convert to dataframe
 
-getwd()
+class(airports)
+head(airports)
+sum(airports$Number)
+
+airports$DAMAGE_LEVEL[which(airports$DAMAGE_LEVEL == 'N')] <- "No Damage"
+airports$DAMAGE_LEVEL[which(airports$DAMAGE_LEVEL == 'M?')] <- "Uncertain Damage"
+airports$DAMAGE_LEVEL[which(airports$DAMAGE_LEVEL == 'M')] <- "Minor Damage"
+airports$DAMAGE_LEVEL[which(airports$DAMAGE_LEVEL == 'S')] <- "Substantial Damage"
+airports$DAMAGE_LEVEL[which(airports$DAMAGE_LEVEL == 'D')] <- "Destroyed"
+# missing values/no reported damage level treated as no damage 
+airports$DAMAGE_LEVEL[is.na(airports$DAMAGE_LEVEL)] <- "No Damage" 
+
+airports <- dcast(airports, AIRPORT + INCIDENT_YEAR ~ DAMAGE_LEVEL,
+           value.var = 'Number', fill = 0, fun.aggregate = sum)
+sum(colSums(airports[,3:12]))
+
+airports$AIRPORT[which(airports$AIRPORT == 'UNKNOWN')] <- "Bird Strike occured during flight."
+
+airports$'Damage to Military Aircraft' <- rowSums(
+  subset(airports, select = c("Class A", "Class B", "Class C", "Class D", "Class E")))
+
+airports <- airports %>% select(-c("Class A", "Class B", "Class C", "Class D", "Class E"))
+airports <- airports %>% rename(Airport = AIRPORT, Year = INCIDENT_YEAR)
+airports$'Total bird strikes' <- rowSums(airports %>% select(-c(Airport, Year)))
+
+airports <- airports %>% select(c("Airport", "Year", "Total bird strikes", "No Damage",
+                                  "Uncertain Damage", "Minor Damage", "Substantial Damage",
+                                  "Destroyed", "Damage to Military Aircraft"))
+names(airports)
+head(airports)
+
 if(!dir.exists(file.path(getwd(), 'rds_data'))){
   dir.create(file.path(getwd(), 'rds_data'))}
 # save result as .rds file
-saveRDS(airportTab, file="rds_data/airportTab.rds")
+saveRDS(airports, file="rds_data/airports.rds")
 
-# airport[airport$Damage %in% c("M", "M?", "S", "D"),]
-airports <- airport %>% group_by(Airport, Damage) %>% 
-  summarise(Number_of_Incident = sum(Number))
+####################
+yearStart = 1990
+yearEnd = 2000
+airports %>% filter(Year >= yearStart, Year <= yearEnd)
 
-airports <- as.data.frame(airports) # convert to dataframe
-
-
-data <- data.frame(matrix(ncol = 6, nrow = length(unique(airports$Airport)))) # create an 
-# empty dataframe
-colnames(data) <- c('Airport', 'Number_of_Incidents', 'Uncertain', 'Minor', 
-                  'Substantial', 'Destroyed')
-
-data$Airport <- unique(airports$Airport)
-for(i in 1:nrow(data)){
-  data$Number_of_Incidents[i] <- 
-    sum(airports$Number_of_Incident[airports$Airport == data$Airport[i]])
-  data$Uncertain[i] <- 
-    sum(airports$Number_of_Incident[airports$Airport == data$Airport[i] & airports$Damage == 'M?'])
-  data$Minor[i] <- 
-    sum(airports$Number_of_Incident[airports$Airport == data$Airport[i] & airports$Damage == 'M'])
-  data$Substantial[i] <- 
-    sum(airports$Number_of_Incident[airports$Airport == data$Airport[i] & airports$Damage == 'S'])
-  data$Destroyed[i] <- 
-    sum(airports$Number_of_Incident[airports$Airport == data$Airport[i] & airports$Damage == 'D'])
-}
-# data <- data[data$Airport != 'UNKNOWN', ]
-airportTab[airportTab$Airport == 'UNKNOWN', ]
+airportsSum <- airports %>% group_by(Airport) %>%
+  summarise("Total bird strikes" = sum(`Total bird strikes`), "No Damage" = sum(`No Damage`),
+            "Uncertain Damage" = sum(`Uncertain Damage`), "Minor Damage" = sum(`Minor Damage`),
+            "Destroyed" = sum(`Destroyed`), "Damage to Military Aircraft" = 
+              sum(`Damage to Military Aircraft`))
+head(airportsSum)
 
 
-data <- data[order(-data$Number_of_Incidents),]
-data <- data[order(data$Airport, decreasing=TRUE),] 
-data <- data[order(data$Airport),] 
+##@@@@@@@@@@@@@@@@@@ Effect on flight operations
 
-head(data)
-class(data)
-data[order(data$Number_of_Incidents, decreasing=TRUE),] 
+flight <- df %>% select(EFFECT, INCIDENT_YEAR)
+str(flight)
+table(is.na(flight$EFFECT))
+flight <- flight %>% group_by(INCIDENT_YEAR, EFFECT) %>% 
+  summarise(Number = n())
+flight <- as.data.frame(flight)
+table(flight$EFFECT)
 
-sum(data$Number_of_Incidents)
+flight$EFFECT[is.na(flight$EFFECT)] <- "Not mentioned"
+flight$EFFECT[which(flight$EFFECT == 'Aborted Take-off, Other')] <- "Aborted Take-off"
+flight$EFFECT[which(flight$EFFECT == 'Engine Shutdown, Precautionary Landing')] <- "Precautionary Landing"
+flight$EFFECT[which(flight$EFFECT == 'None, Precautionary Landing')] <- "Precautionary Landing"
+flight$EFFECT[which(flight$EFFECT == 'Other, Precautionary Landing')] <- "Precautionary Landing"
+table(flight$EFFECT)
 
-######## Effect on flight operations
+flight <- flight %>% rename(Year = INCIDENT_YEAR, Effect = EFFECT)
 
-flight <- data.frame(matrix(ncol = 2, nrow = nrow(df))) # create an empty dataframe
-colnames(flight) <- c('Effect_on_Flight', 'Year')
-
-flight$Effect_on_Flight <- as.character(df$EFFECT)
-flight$Year <- df$INCIDENT_YEAR
-
-# flight <- flight[flight$Year != 2020,]
-flight <- flight[complete.cases(flight),] # Remove NAs
-flight <- flight[flight$Effect_on_Flight != 'None',]
-
-flight$Effect_on_Flight[flight$Effect_on_Flight == 'ENGINE SHUT DOWN'] <- "Engine Shut Down"
-
-
-dim(flight)
-table(flight$Effect_on_Flight)
-
+if(!dir.exists(file.path(getwd(), 'rds_data'))){
+  dir.create(file.path(getwd(), 'rds_data'))}
+# save result as .rds file
 saveRDS(flight, file="rds_data/flight.rds")
 
-fl <- flight %>% group_by(Effect_on_Flight) %>% 
-  summarise(Number = n()) # group data
-fl <- as.data.frame(fl) # convert to dataframe
-head(fl)
-dim(fl)
+#####################
+yearStart = 1990
+yearEnd = 2000
+flight %>% filter(Year >= yearStart, Year <= yearEnd)
 
-p <- plot_ly(fl, x = ~Effect_on_Flight, y = ~Number, type = 'bar',
-             text = ~Number, textposition = 'outside',
-             marker =list(color = rainbow(nrow(fl),1))) %>%
-  layout(title = "Effects on flight operations by Bird Strike",
-         yaxis = list(title = "Number of incidents"),
-         xaxis = list(title = "Effect on Flight"))
-print(p)
-sum(fl$Number)
+fli <- flight %>% group_by(Effect) %>% summarise(Number = sum(Number))
+fli <- as.data.frame(fli)
+sum(fli$Number)
 
-####### Phase of the flight when bird strikes
+# exclude None and Not mentioned cases 
 
-phase <- data.frame(matrix(ncol = 2, nrow = nrow(df))) # create an empty dataframe
-colnames(phase) <- c('Phase_of_Flight', 'Year')
+fli <- fli %>% filter(!fli$Effect %in% c('None', 'Not mentioned'))
 
-phase$Phase_of_Flight <- df$PHASE_OF_FLIGHT
-phase$Year <- df$INCIDENT_YEAR
+fli$Percentage <- round(fli$Number/sum(flight$Number)*100, 2)
 
-# phase <- phase[phase$Year != 2020,]
-phase <- phase[complete.cases(phase),] # Remove NAs
-phase <- phase[phase$Phase_of_Flight != 'None',]
-dim(phase)
-table(phase$Phase_of_Flight)
+fli$Effect <- factor(fli$Effect, levels = c("Aborted Take-off", "Precautionary Landing",
+                                            "Engine Shutdown", 'Other'))
+fli
 
+ap17 <- list(x = 'Precautionary Landing', xref = 'x',
+             y = fli[fli$Effect == 'Precautionary Landing', 'Number'], yerf = 'y',
+             text = paste0('Percentage shown is <br>in respect of a total of <br>',
+                           sum(flight$Number), ' bird strikes'),  align = 'left',
+             showarrow = TRUE, arrowhead = 0, arrowwidth = 1.2,
+             ax = 150, ay = 40, font = list(color ='white'), bgcolor = 'green'
+)
+
+title = paste0("Effects on flight operations due to bird strike<br>from ",
+               yearStart, " to ", yearEnd)
+p17 <- plot_ly(fli, x = ~Effect, y = ~Number, type = 'bar',
+               text = ~paste0(Number, ' (~', Percentage,'%)'), textposition = 'outside',
+               hoverinfo = 'x', marker =list(color = rainbow(nrow(fli)))) %>%
+  layout(title = title, annotations = ap17,
+         xaxis = list(title = 'Effect on flight'),
+         yaxis = list(title = "Number of cases"))
+print(p17)
+
+
+##@@@@@@@@@@@@@@@@@@ Phase of the flight when bird strikes
+
+phase <- df %>% select(PHASE_OF_FLIGHT, INCIDENT_YEAR)
+str(phase)
+table(is.na(phase$PHASE_OF_FLIGHT))
+phase <- phase %>% group_by(INCIDENT_YEAR, PHASE_OF_FLIGHT) %>% 
+  summarise(Number = n()) 
+phase <- as.data.frame(phase)
+phase <- phase %>% rename(Year = INCIDENT_YEAR, Phase = PHASE_OF_FLIGHT)
+table(phase$Phase)
+
+phase$Phase[is.na(phase$Phase)] <- "Not mentioned"
+phase$Phase[which(phase$Phase == 'Departure')] <- "Climb"
+phase$Phase[which(phase$Phase == 'Arrival')] <- "Approach/Descent"
+phase$Phase[which(phase$Phase == 'Descent')] <- "Approach/Descent"
+phase$Phase[which(phase$Phase == 'Approach')] <- "Approach/Descent"
+phase$Phase[which(phase$Phase == 'Local')] <- "Taxi/Park"
+phase$Phase[which(phase$Phase == 'Parked')] <- "Taxi/Park"
+phase$Phase[which(phase$Phase == 'Taxi')] <- "Taxi/Park"
+
+table(phase$Phase)
+str(phase)
+
+if(!dir.exists(file.path(getwd(), 'rds_data'))){
+  dir.create(file.path(getwd(), 'rds_data'))}
+# save result as .rds file
 saveRDS(phase, file="rds_data/phase.rds")
 
-ph <- phase %>% group_by(Phase_of_Flight) %>% 
-  summarise(Number = n()) # group data
-ph <- as.data.frame(ph) # convert to dataframe
-head(ph)
-dim(ph)
+################################
+yearStart = 1990
+yearEnd = 2000
+phase %>% filter(Year >= yearStart, Year <= yearEnd)
 
-p <- plot_ly(ph, x = ~Phase_of_Flight, y = ~Number, type = 'bar',
-             text = ~Number, textposition = 'outside',
-             marker =list(color = rainbow(nrow(ph),1))) %>%
-  layout(title = "Phase of Flight and Frequency of Bird Strike",
-         yaxis = list(title = "Number of incidents"),
-         xaxis = list(title = "Phase of Flight"))
-print(p)
-sum(ph$Number)
+pha <- phase %>% group_by(Phase) %>% summarise(Number = sum(Number))
+pha <- as.data.frame(pha)
+sum(pha$Number)
+
+# exclude None and Not mentioned cases 
+table(pha$Phase)
+pha <- pha %>% filter(!pha$Phase == 'Not mentioned')
+
+pha$Percentage <- round(pha$Number/sum(phase$Number)*100, 2)
+
+pha$Phase <- factor(pha$Phase,
+                    levels = c('Take-off Run', 'Climb', 'En Route',
+                               'Approach/Descent', 'Landing Roll', 'Taxi/Park'))
+pha
+
+ap18 <- list(x = 'Climb', xref = 'x',
+             y = pha[pha$Phase == 'Climb', 'Number'], yerf = 'y',
+             text = paste0('Percentage shown is <br>in respect of a total of <br>',
+                           sum(phase$Number), ' bird strikes'),  align = 'left',
+             showarrow = TRUE, arrowhead = 0, arrowwidth = 1.2,
+             ax = 100, ay = 30, font = list(color ='white'), bgcolor = 'green'
+)
+
+title = paste0("Phase of the flight vs Bird Strike<br>from ",
+               yearStart, " to ", yearEnd)
+p18 <- plot_ly(pha, x = ~Phase, y = ~Number, type = 'bar',
+               text = ~paste0(Number, ' (~', Percentage,'%)'), textposition = 'outside',
+               hoverinfo = 'x', marker =list(color = rainbow(nrow(pha)))) %>%
+  layout(title = title, annotations = ap18,
+         xaxis = list(title = 'Effect on flight'),
+         yaxis = list(title = "Number of cases"))
+print(p18)
 
 
-#####################################################################################
 
-#################### Information on States
+##@@@@@@@@@@@@@@@@@@ Information on States
 head(map_data('state'))
 
 # read data about states, (state population, gdp, area)
-dfStates <- read.csv("usaData.csv", strip.white = TRUE)
+dfStates <- read.csv("database/usaData.csv", strip.white = TRUE)
 head(dfStates)
 dfStates['long'] <- 0 # emppty column to store longitude
 dfStates['lat'] <- 0
@@ -205,8 +263,8 @@ saveRDS(dfStates, file="rds_data/dfStates.rds")
 pal <- colorFactor(palette = c("red","green", "blue" ) ,domain = dfStates$Number)
 
 leaflet(data = dfStates) %>% addTiles()  %>%
-  addCircles(lng= dfStates$long, lat = dfStates$lat, color = ~pal(dfStates$Number))  %>% 
-  addCircleMarkers(~long, ~lat, radius = dfStates$radius, color= ~pal(Number), 
+  addCircles(lng= dfStates$long, lat = dfStates$lat, color = "red")  %>% 
+  addCircleMarkers(~long, ~lat, radius = dfStates$radius, color= "red", 
                    popup = ~as.character(paste("State:", dfStates$state,"<br>",
                     'Number of Incidents:', dfStates$Number))) 
 

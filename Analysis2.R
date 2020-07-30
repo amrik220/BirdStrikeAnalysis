@@ -1,6 +1,6 @@
 # Author: Amrik Singh
-# Project Title: Analysis of bird strikes reported in USA from Jan-1990 to Apr-2020
-# (FAA Wildlife Strike Database, from Jan-1990 to Apr-2020)
+# Project Title: Analysis of bird strikes reported in USA from 1990 to 2019
+# (FAA Wildlife Strike Database, from 1990 to 2019)
 
 #' Code Description: Data processing to explore, visualize, and analyze data
 #' File Name: Analysis2.R # Aircraft and Bird species
@@ -212,6 +212,8 @@ head(civil)
 names(civil)
 table(civil$DAMAGE_LEVEL)
 
+civi$DAMAGE_LEVEL[is.na(civi$DAMAGE_LEVEL)]
+
 civil$DAMAGE_LEVEL <- as.character(civil$DAMAGE_LEVEL)
 #civil <- civil[civil$DAMAGE_LEVEL %in% c("M", "M?", "S", "D", "N"),]
 
@@ -225,13 +227,15 @@ civil$DAMAGE_LEVEL[which(civil$DAMAGE_LEVEL == 'M?')] <- "Uncertain"
 civil$DAMAGE_LEVEL[which(civil$DAMAGE_LEVEL == 'M')] <- "Minor"
 civil$DAMAGE_LEVEL[which(civil$DAMAGE_LEVEL == 'S')] <- "Substantial"
 civil$DAMAGE_LEVEL[which(civil$DAMAGE_LEVEL == 'D')] <- "Destroyed"
+# missing values/no reported damage level treated as no damage 
+civil$DAMAGE_LEVEL[is.na(civil$DAMAGE_LEVEL)] <- "No Damage" 
 
 # save result as .rds file
 saveRDS(civil, file="rds_data/civil.rds")
 
 civi <- civil %>% group_by(DAMAGE_LEVEL) %>% 
-  summarise(Number = sum(Number)) # get data by year and time of day
-civi <- as.data.frame(civi) # convert to dataframe
+  summarise(Number = sum(Number)) 
+civi <- as.data.frame(civi) 
 
 # exlude no damage cases
 civi <- civi[which(civi$DAMAGE_LEVEL != "No Damage"),]
@@ -239,22 +243,23 @@ head(civi)
 sum(civi$Number)
 sum(civil$Number)
 round(sum(civi$Number)/sum(civil$Number)*100,2)
-civi$Percentage <- round(civi$Number/sum(civi$Number)*100, 2)
-
-# p11 <- ggplot(data = civi, aes(x= DAMAGE_LEVEL, y = Number, fill = DAMAGE_LEVEL)) + 
-#   geom_bar(stat="identity") + theme_minimal() + theme(plot.title = element_text(hjust = 0.5)) +
-#   scale_x_discrete(limits = c('Uncertain', 'Minor', 'Substantial', 'Destroyed')) +
-#   labs(title = "Damage to civil aircraft Vs Number of incidents\n", 
-#        x = "Damage to civil aircraft", y = "Number of Incidents")
-# ggplotly(p11)
+civi$Percentage <- round(civi$Number/sum(civil$Number)*100, 2)
 
 civi$DAMAGE_LEVEL <- factor(civi$DAMAGE_LEVEL, 
                             levels = c("Uncertain", "Minor", "Substantial", 'Destroyed'))
 
+ap11 <- list(x = 'Minor', xref = 'x',
+             y = civi[civi$DAMAGE_LEVEL == 'Minor', 'Number'], yerf = 'y',
+             text = paste0('Percentage shown is <br>in respect of a total of <br>',
+                           sum(civil$Number), ' bird strikes'),  align = 'left',
+             showarrow = TRUE, arrowhead = 0, arrowwidth = 1.2,
+             ax = 150, ay = 20, bordercolor = 'green'
+)
+
 p11 <- plot_ly(civi, x = ~DAMAGE_LEVEL, y = ~Number, type = 'bar',
                text = ~paste0(Number, ' (~', Percentage,'%)'), textposition = 'outside',
                hoverinfo = 'x', marker =list(color = rainbow(nrow(civi)))) %>%
-  layout(title = "Cases of damage to civil aircraft",
+  layout(title = "Cases of damage to civil aircraft", annotations = ap11,
          xaxis = list(title = 'Damage level'),
          yaxis = list(title = "Number of cases"))
 print(p11)
@@ -280,7 +285,7 @@ mili$DAMAGE_LEVEL[which(mili$DAMAGE_LEVEL == 'M?')] <- "Uncertain"
 saveRDS(mili, file="rds_data/mili.rds")
 
 mil <- mili %>% group_by(DAMAGE_LEVEL) %>% 
-  summarise(Number = sum(Number)) # get data by year and time of day
+  summarise(Number = sum(Number)) 
 mil <- as.data.frame(mil) # convert to dataframe
 # exlude no damage cases
 mil <- mil[which(mil$DAMAGE_LEVEL != "N"),]
@@ -359,7 +364,7 @@ head(birdMass)
 unique(birdMass$b_weight)
 
 birdMass <- birdMass %>% group_by(Year, b_weight) %>% 
-  summarise(Number = n()) # get data by year and aircraft weight
+  summarise(Number = n()) 
 
 birdMass <- as.data.frame(birdMass) # convert to dataframe
 

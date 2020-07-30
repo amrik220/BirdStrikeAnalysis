@@ -1,6 +1,6 @@
 # Author: Amrik Singh
-# Project Title: Analysis and visualisation of bird strikes in USA from Jan-1990 to Apr-2020
-# (FAA Wildlife Strike Database, from Jan-1990 to Apr-2020)
+# Project Title: Analysis of bird strikes reported in USA from 1990 to 2019
+# (FAA Wildlife Strike Database, from 1990 to 2019)
 
 #' Code Description:
 #' 1. Read "wildlife.accdb" file (MS Access database file) in R and save 
@@ -73,7 +73,7 @@ cat("Total number of attributes for a bird strike: ", dim(df)[2])
 
 # Filter data from Jan 1990 to Apr 2020
 
-df <- df %>% filter(INCIDENT_YEAR >= 1990, INCIDENT_DATE <= '2020-04-30')
+df <- df %>% filter(INCIDENT_YEAR >= 1990, INCIDENT_YEAR <= 2019)
 dim(df)
 df <- type.convert(df, na.strings = c("NA", ''), as.is = TRUE, dec = ".", numerals = "no.loss")
 str(df)
@@ -174,7 +174,10 @@ dim(df)
 cat("Total number of incidents of bird strikes: ", dim(df)[1])
 cat("Total number of attributes for a bird strikes: ", dim(df)[2])
 
-saveRDS(df, file="birdStrikesAll.rds")
+
+if(!dir.exists(file.path(getwd(), 'database'))){
+  dir.create(file.path(getwd(), 'database'))}
+saveRDS(df, file="database/birdStrikesAll.rds")
 # save the data in .CSV format
 # write.csv(df, file = "birdStrikesAll.csv", row.names=FALSE)
 rm(df) # remove dataframe from memory
