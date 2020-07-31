@@ -68,7 +68,7 @@ saveRDS(airports, file="rds_data/airports.rds")
 
 ####################
 yearStart = 1990
-yearEnd = 2000
+yearEnd = 2020
 airports %>% filter(Year >= yearStart, Year <= yearEnd)
 
 airportsSum <- airports %>% group_by(Airport) %>%
@@ -76,7 +76,7 @@ airportsSum <- airports %>% group_by(Airport) %>%
             "Uncertain Damage" = sum(`Uncertain Damage`), "Minor Damage" = sum(`Minor Damage`),
             "Destroyed" = sum(`Destroyed`), "Damage to Military Aircraft" = 
               sum(`Damage to Military Aircraft`))
-head(airportsSum)
+head(airportsSum %>% arrange(desc(`Total bird strikes`)))
 
 
 ##@@@@@@@@@@@@@@@@@@ Effect on flight operations
@@ -103,17 +103,11 @@ if(!dir.exists(file.path(getwd(), 'rds_data'))){
 # save result as .rds file
 saveRDS(flight, file="rds_data/flight.rds")
 
-#####################
-yearStart = 1990
-yearEnd = 2000
-flight %>% filter(Year >= yearStart, Year <= yearEnd)
-
 fli <- flight %>% group_by(Effect) %>% summarise(Number = sum(Number))
 fli <- as.data.frame(fli)
 sum(fli$Number)
 
 # exclude None and Not mentioned cases 
-
 fli <- fli %>% filter(!fli$Effect %in% c('None', 'Not mentioned'))
 
 fli$Percentage <- round(fli$Number/sum(flight$Number)*100, 2)
@@ -135,7 +129,7 @@ title = paste0("Effects on flight operations due to bird strike<br>from ",
 p17 <- plot_ly(fli, x = ~Effect, y = ~Number, type = 'bar',
                text = ~paste0(Number, ' (~', Percentage,'%)'), textposition = 'outside',
                hoverinfo = 'x', marker =list(color = rainbow(nrow(fli)))) %>%
-  layout(title = title, annotations = ap17,
+  layout(title = title, annotations = ap17, margin=list(t = 70),
          xaxis = list(title = 'Effect on flight'),
          yaxis = list(title = "Number of cases"))
 print(p17)
@@ -169,8 +163,6 @@ if(!dir.exists(file.path(getwd(), 'rds_data'))){
 # save result as .rds file
 saveRDS(phase, file="rds_data/phase.rds")
 
-################################
-
 pha <- phase %>% group_by(Phase) %>% summarise(Number = sum(Number))
 pha <- as.data.frame(pha)
 sum(pha$Number)
@@ -199,7 +191,7 @@ title = paste0("Phase of the flight vs Bird Strike<br>from ",
 p18 <- plot_ly(pha, x = ~Phase, y = ~Number, type = 'bar',
                text = ~paste0(Number, ' (~', Percentage,'%)'), textposition = 'outside',
                hoverinfo = 'x', marker =list(color = rainbow(nrow(pha)))) %>%
-  layout(title = title, annotations = ap18,
+  layout(title = title, annotations = ap18, margin=list(t = 70),
          xaxis = list(title = 'Effect on flight'),
          yaxis = list(title = "Number of cases"))
 print(p18)
@@ -227,43 +219,41 @@ for(i in 1:nrow(dfStates)){
 dfStates <- dfStates[complete.cases(dfStates),]
 nrow(dfStates) # Hawaii and Alaska excluded from this.
 
-sCode <- data.frame(matrix(ncol = 2, nrow = nrow(df))) # create an empty dataframe
-# from states and information about number of incidents in each state
+sCode <- df %>% select(STATE, INCIDENT_YEAR)
 colnames(sCode) <- c('code', 'Year')
 
-sCode$code <- df$STATE # it contains the state code from the database
-sCode$Year <- df$INCIDENT_YEAR
-
-# filter states and number of incidents
-# sCode <- sCode[sCode$Year != 2020,]
 sCode <- sCode[complete.cases(sCode),] # Remove NAs
 sCode <- sCode[sCode$code != 'None',]
+
+saveRDS(sCode, file="rds_data/sCode.rds")
+saveRDS(dfStates, file="rds_data/dfStates.rds")
+
 
 # count number of incidents in each states
 sc <- sCode %>% group_by(code) %>% 
   summarise(Number = n()) # group data
 sc <- as.data.frame(sc) # convert to dataframe
 
-# integrated data for states with number of incidents
-dfStates['Number'] <- 0 
-dfStates$code <- as.character(dfStates$code)
-for(i in 1:nrow(dfStates)){
-  dfStates$Number[i] <- sc$Number[sc$code == dfStates$code[i]]
-}
-
+stab <- sc %>% inner_join(dfStates)
 # calculate radius values corresponding the number of incidents in each state
-dfStates['radius'] <- dfStates$Number*30/max(dfStates$Number)
-head(dfStates$radius)
-# save result for future use
-saveRDS(dfStates, file="rds_data/dfStates.rds")
+stab['radius'] <- stab$Number*30/max(stab$Number)
 
-pal <- colorFactor(palette = c("red","green", "blue" ) ,domain = dfStates$Number)
+stab <- stab %>% select(c("state", "Number", "gdp.m.", "population", "area.sqmi.", 
+                                  "code", "long", "lat", "radius"))
+names(stab) <- c("State", "Number of bird strikes", "GDP (in USD Mil.)",
+                 "Population", "Ares in sqmi.", 
+                 "code", "long", "lat", "radius")
+colors = c('red', 'green', 'violet', 'maroon', 'blue', 'magenta', 'pick', 'purple', 'brown', 'cyan')
+leaflet(data = stab) %>% addTiles()  %>%
+  addCircles(lng= stab$long, lat = stab$lat, color = "red")  %>% 
+  addCircleMarkers(~long, ~lat, radius = stab$radius, color= sample(colors, 1), 
+                   popup = ~as.character(paste("State:", stab$State,"<br>",
+                                               'Number of Incidents:', stab$`Number of bird strikes`)))
 
-leaflet(data = dfStates) %>% addTiles()  %>%
-  addCircles(lng= dfStates$long, lat = dfStates$lat, color = "red")  %>% 
-  addCircleMarkers(~long, ~lat, radius = dfStates$radius, color= "red", 
-                   popup = ~as.character(paste("State:", dfStates$state,"<br>",
-                    'Number of Incidents:', dfStates$Number))) 
 
 
-names(dfStates)
+a <- stab %>% select(c("State", "Number of bird strikes", "GDP (in USD Mil.)",
+                  "Population", "Ares in sqmi.")) %>% arrange(desc(`Number of bird strikes`))
+
+a$State
+                 

@@ -24,11 +24,11 @@ df <- readRDS("database/birdStrikesAll.rds")
 # Data has 23 different columns that have information about the point of impact and location of 
 # damage
 
-poi <- data.frame(matrix(ncol = 6, nrow = nrow(df))) # create an empty dataframe to store 
+poi <- data.frame(matrix(ncol = 7, nrow = nrow(df))) # create an empty dataframe to store 
 # information about "Point of Impact
-colnames(poi) <- c("Nose/Radome", "Windshield", "Engine", "Wing", "Fuselage/Body",
+colnames(poi) <- c("Year", "Nose/Radome", "Windshield", "Engine", "Wing", "Fuselage/Body",
                    "Tail")
-
+poi$Year <- df$INCIDENT_YEAR
 poi['Nose/Radome'] <- df$STR_NOSE + df$STR_RAD
 
 poi['Windshield'] <- df$STR_WINDSHLD
@@ -38,16 +38,16 @@ poi['Wing'] <- df$STR_WING_ROT + df$STR_LGHTS
 poi['Fuselage/Body'] <- df$STR_FUSE + df$STR_LG + df$STR_OTHER
 poi['Tail'] <- df$STR_TAIL
 
-colSums(poi) # see the values
-sum(colSums(poi)) # check total number of cases where the information about the point
+colSums(poi[-1]) # see the values
+sum(colSums(poi[-1])) # check total number of cases where the information about the point
 # of impact is available
 
 # view the percentage of point of impact
-round(colSums(poi)/sum(colSums(poi))*100,2)
+round(colSums(poi[-1])/sum(colSums(poi[-1]))*100,2)
 
-pointOfImpact <- data.frame(colSums(poi))
+pointOfImpact <- data.frame(colSums(poi[-1]))
 pointOfImpact <- cbind(pointOfImpact,
-                       round(colSums(poi)/sum(colSums(poi))*100,2))
+                       round(colSums(poi[-1])/sum(colSums(poi[-1]))*100,2))
 
 pointOfImpact$poi <- row.names(pointOfImpact)
 names(pointOfImpact) <- c('num', 'percentage', 'poi')
@@ -65,11 +65,11 @@ plot_ly(pointOfImpact, x = ~poi, y = ~num, type = 'bar',
 ###### Location of damage. whether the bird strike resulted in damage of the parts of
 # aircraft
 
-lod <- data.frame(matrix(ncol = 6, nrow = nrow(df))) # create an empty dataframe to store 
+lod <- data.frame(matrix(ncol = 7, nrow = nrow(df))) # create an empty dataframe to store 
 # information about "Location of Damage"
-colnames(lod) <- c("Nose/Radome", "Windshield", "Engine", "Wing", "Fuselage/Body",
+colnames(lod) <- c('Year', "Nose/Radome", "Windshield", "Engine", "Wing", "Fuselage/Body",
                    "Tail")
-
+lod$Year <- df$INCIDENT_YEAR
 lod['Nose/Radome'] <- df$DAM_NOSE + df$DAM_RAD
 lod['Windshield'] <- df$DAM_WINDSHLD
 lod['Engine'] <- df$DAM_ENG1 + df$DAM_ENG2 + df$DAM_ENG3 + df$DAM_ENG4 + df$DAM_PROP +
@@ -78,21 +78,25 @@ lod['Wing'] <- df$DAM_WING_ROT + df$DAM_LGHTS
 lod['Fuselage/Body'] <- df$DAM_FUSE + df$DAM_LG + df$DAM_OTHER
 lod['Tail'] <- df$DAM_TAIL
 
-colSums(lod) # see the values
-sum(colSums(lod)) # check total number of cases where the information about the point
+colSums(lod[-1]) # see the values
+sum(colSums(lod[-1])) # check total number of cases where the information about the point
 # of impact is available
 
 # view the percentage of point of impact
-round(colSums(lod)/sum(colSums(lod))*100,2)
+round(colSums(lod[-1])/sum(colSums(lod[-1]))*100,2)
 
 
-pointOfImpact$lodNum <- colSums(lod)
-pointOfImpact$lodPer <- round(colSums(lod)/sum(colSums(lod))*100,2)
+pointOfImpact$lodNum <- colSums(lod[-1])
+pointOfImpact$lodPer <- round(colSums(lod[-1])/sum(colSums(lod[-1]))*100,2)
 pointOfImpact$damPer <- round(pointOfImpact$lodNum/pointOfImpact$num*100,2)
 
 pointOfImpact
 sum(pointOfImpact$num)
+
 # main plot for final visualization
+yearStart = 1990; yearEnd = 2019
+title = paste0("Points of impact of bird strike and number of cases of damage<br>from ",
+               yearStart, " to ", yearEnd)
 ay <- list(overlaying = "y", side = 'right', title = 'Percentage of cases resulted in damage')
 p1 <- plot_ly(pointOfImpact, x = ~poi, y = ~num, type = 'bar',
              text = ~num, textposition = 'outside', hoverinfo = 'y',
@@ -101,7 +105,7 @@ p1 <- plot_ly(pointOfImpact, x = ~poi, y = ~num, type = 'bar',
             text = ~lodNum, textposition = 'outside', offsetgroup = 2) %>%
   add_bars(y = ~damPer, name = 'Percentage of cases resulted in damage',
            yaxis = 'y2', text = ~paste0(damPer,'%'), textposition = 'outside',offsetgroup = 3) %>%
-  layout(title = "Points of impact of bird strike and number of cases of damage", 
+  layout(title = title, 
          yaxis2 = ay,
          xaxis = list(title = "Point of Impact/Location of Damage"),
          yaxis = list(title = "Number of bird strikes"),
@@ -126,13 +130,14 @@ incidentTrend <- df %>% group_by(INCIDENT_YEAR) %>%
 incidentTrend <- as.data.frame(incidentTrend)
 colnames(incidentTrend) <- c('Year', 'Number_of_Incidents')
 
-# incidentTrend <- incidentTrend[incidentTrend$Year != 2020,]
-# class(incidentTrend)
 
 # Plot trend line
+yearStart = 1990; yearEnd = 2019
+title = paste0("Number of bird strike incidents per year<br>from ",
+               yearStart, " to ", yearEnd)
 p2 <- plot_ly(incidentTrend, x = ~Year, y = ~Number_of_Incidents, type = 'scatter',
-        mode = 'lines') %>% layout(title = "Number of bird strike incidents per year",
-         xaxis = list(title = "Year"),
+        mode = 'lines') %>% layout(title = title,
+         xaxis = list(title = "Year"), margin=list(t = 40),
          yaxis = list(title = "Number of bird strikes"))
 print(p2)
 
@@ -147,17 +152,17 @@ injuryTrend[is.na(injuryTrend)] <- 0
 
 injuryTrend$Number_of_Injuries <- injuryTrend$Number_of_Injuries + injuryTrend$fatalities
 
-# head(injuryTrend)
-
 injuryTrend <- injuryTrend %>% group_by(Year) %>% 
   summarise(Number_of_Injuries = sum(Number_of_Injuries))
 
 # injuryTrend <- injuryTrend[injuryTrend$Year != 2020,]
 class(injuryTrend)
-
-p3 <- plot_ly(injuryTrend, x = ~injuryTrend$Year, y = ~injuryTrend$Number_of_Injuries, 
+yearStart = 1990; yearEnd = 2019
+title = paste0("Number of persons injured due to bird strikes per year<br>from ",
+               yearStart, " to ", yearEnd)
+p3 <- plot_ly(injuryTrend, x = ~Year, y = ~Number_of_Injuries, 
         type = 'scatter', mode = 'lines') %>%
-  layout(title = "Number of persons injured due to bird strikes per year",
+  layout(title = title, margin=list(t = 40),
          xaxis = list(title = "Year"),
          yaxis = list(title = "Number of persons injured"))
 print(p3)
@@ -165,10 +170,8 @@ print(p3)
 # incident in which 100 people where injured. This is famous Hudson River incident.
 
 # combine the result of the two steps above
-incidentTrend <- cbind(incidentTrend, injuryTrend)
-incidentTrend
-incidentTrend <- subset(incidentTrend, select = -3)
-incidentTrend
+incidentTrend$Number_of_Injuries <- injuryTrend$Number_of_Injuries
+head(incidentTrend)
 # plot_ly(data = incidentTrend, x = ~Number_of_Injuries, 
 # y = ~Number_of_Incidents, type = 'scatter') # Not much insights
 
@@ -197,8 +200,7 @@ incidentTrendNorm <- incidentTrend[incidentTrend$Year >= 2000,] # filter origina
 rownames(incidentTrendNorm) <- seq(length=nrow(incidentTrendNorm)) # reset row index
 
 # integrate two data sets
-incidentTrendNorm <- cbind(incidentTrendNorm, dfPassengers)
-incidentTrendNorm <- subset(incidentTrendNorm, select = -4)
+incidentTrendNorm$Passengers <- dfPassengers$Passengers
 incidentTrendNorm
 
 # get relative scores for number of injuries and incidents
@@ -220,16 +222,20 @@ incidentTrendNorm$Number_of_IncidentsNor <- as.numeric(incidentTrendNorm$Number_
 incidentTrendNorm$Number_of_InjuriesNor <- as.numeric(incidentTrendNorm$Number_of_InjuriesNor)
 
 # Plot the results
+yearStart = 1990; yearEnd = 2019
+title = paste0("z-score normalized trend for bird strike incidents per year<br>from ",
+               yearStart, " to ", yearEnd)
 p4 <- plot_ly(incidentTrendNorm, x = ~Year, y = ~Number_of_IncidentsNor, 
         type = 'scatter', mode = 'lines') %>% 
-  layout(title = "z-score normalized trend for bird strike incidents per year",
+  layout(title = title, margin=list(t = 40),
                   xaxis = list(title = "Year"),
                   yaxis = list(title = "z-score for Incidents of bird strikes"))
 print(p4)
-
+title = paste0("z-score normalized trend for number of persons injured vs Year<br>from ",
+               yearStart, " to ", yearEnd)
 p5 <- plot_ly(incidentTrendNorm, x = ~Year, y = ~Number_of_InjuriesNor, 
         type = 'scatter', mode = 'lines') %>%
-  layout(title = "z-score normalized trend for number of persons injured vs Year",
+  layout(title = title,margin=list(t = 40),
          xaxis = list(title = "Year"),
          yaxis = list(title = "z-score for number of persons injured"))
 print(p5)
@@ -241,68 +247,68 @@ saveRDS(incidentTrendNorm, file="rds_data/incidentTrendNorm.rds")
 # Which part of the year a bird strike is most like to occur #
 
 incidentMonths <- df %>% group_by(INCIDENT_YEAR, INCIDENT_MONTH) %>% 
-  summarise(Number_of_Incidents = n()) # get data by months
+  summarise(Incidents = n()) # get data by months
 
-# remove incomplete year 2020
-# incidentMonths <- incidentMonths[incidentMonths$INCIDENT_YEAR != 2020,]
+names(incidentMonths) <- c('Year', 'Month', 'Incidents')
 incidentMonths <- as.data.frame(incidentMonths)
-incidentMonths$INCIDENT_YEAR <- as.factor(incidentMonths$INCIDENT_YEAR)
+
+# save result as .rds file
+saveRDS(incidentMonths, file="rds_data/incidentMonths.rds")
+
+incidentMonths$Year <- as.factor(incidentMonths$Year)
 str(incidentMonths)
 
 # Plot the data
-p6 <- ggplot(data = incidentMonths, aes(x= INCIDENT_MONTH, y = Number_of_Incidents)) + 
-  geom_line(aes(colour= INCIDENT_YEAR)) + theme_minimal() +
-  scale_x_discrete(limits=1:12, labels = 1:12) +
-  labs(title = "Number of bird strike incident Vs Month\n", x = "Month", y = "Number of bird strike incidents",
-       color = "Year")
+labels <- c('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
+title = paste0("Number of bird strike incident Vs Month<br>from ",
+               yearStart, " to ", yearEnd)
+p6 <- ggplot(data = incidentMonths, aes(x= Month, y = Incidents)) + 
+  geom_line(aes(colour= Year)) + theme_minimal() +
+  scale_x_discrete(limits=factor(1:12), labels = labels) +
+  labs(title = title, x = "Month", y = "Number of bird strike incidents",
+       color = "Year") + theme(plot.title = element_text(hjust = 0.5))
 ggplotly(p6)
 
 # We could see from the graph that number of bird strike incidents relative higher in
 # months from June to October. This is interesting, the bird strikes occurs more often
 # in summer and autumn
 
-# save result as .rds file
-saveRDS(incidentMonths, file="rds_data/incidentMonths.rds")
-
-
 
 #################### Incidents with respect to time of the day ###########################
 
-time_of_day <- data.frame(matrix(ncol = 2, nrow = nrow(df))) # create an empty dataframe to 
 # store information about time_of_day
+time_of_day <- df %>% select(TIME_OF_DAY, INCIDENT_YEAR)
 colnames(time_of_day) <- c('Time', 'Year')
 
-time_of_day$Time <- df$TIME_OF_DAY
-time_of_day$Year <- df$INCIDENT_YEAR
+#time_of_day <- time_of_day[complete.cases(time_of_day),] # Remove NAs
 
-time_of_day <- time_of_day[complete.cases(time_of_day),] # Remove NAs
+table(is.na(time_of_day$Time))
+time_of_day$Time[is.na(time_of_day$Time)] <- "Not mentioned"
+table(time_of_day$Time)
 
 time_of_day$Time[which(time_of_day$Time == 'DAWN')] <- "Dawn"
 time_of_day$Time[which(time_of_day$Time == 'DAY')] <- "Day"
 time_of_day$Time[which(time_of_day$Time == 'DUSK')] <- "Dusk"
 time_of_day$Time[which(time_of_day$Time == 'NIGHT')] <- "Night"
 
-time_of_day <- time_of_day[time_of_day$Time != 'UNKNOWN',]
+time_of_day <- time_of_day[time_of_day$Time != 'Not mentioned',]
 
 time_of_day <- time_of_day %>% group_by(Year, Time) %>% 
   summarise(Number = n()) # get data by year and time of day
 
 time_of_day <- as.data.frame(time_of_day) # convert to dataframe
-# time_of_day <- time_of_day[time_of_day$Year != 2020,]
 # save result as .rds file
 saveRDS(time_of_day, file="rds_data/time_of_day.rds")
-
-# time_of_day <- time_of_day[time_of_day$Year >= 1990,]
-# time_of_day <- time_of_day[time_of_day$Year <= 2015,]
 
 dim(time_of_day)
 
 tod <- time_of_day %>% group_by(Time) %>% 
   summarise(Number = sum(Number)) # get data by year and time of day
-tod <- as.data.frame(tod) # convert to dataframe
-
+tod <- as.data.frame(tod)
+title = paste0("Time of the day and occurance of bird strike<br>from ",
+               yearStart, " to ", yearEnd)
 p7 <- plot_ly(tod, labels = ~Time, values = ~Number, type = 'pie') %>%
-  layout(title = 'Time of the Day and Occurance of Bird Strike',
+  layout(title = title, margin=list(t = 70),
          xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
          legend = list(orientation = 'h', xanchor = "center", x=.5))

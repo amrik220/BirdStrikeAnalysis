@@ -93,15 +93,11 @@ saveRDS(wordsALL, file="rds_data/wordsALL.rds")
 
 ################ Aircraft Type vs Bird Strike ############################################
 
-dfAtype <- data.frame(matrix(ncol = 2, nrow = nrow(df))) # create an empty dataframe 
-# to store information about type of aircraft
+dfAtype <- df %>% select(INCIDENT_YEAR, AC_CLASS)
 colnames(dfAtype) <- c('Year', 'Aircraft_Type')
 
-dfAtype$Aircraft_Type <- as.character(df$AC_CLASS)
-dfAtype$Year <- df$INCIDENT_YEAR
 head(dfAtype)
 dfAtype[is.na(dfAtype$Aircraft_Type), "Aircraft_Type"] <- 'Unknown'
-
 class(dfAtype)
 unique(dfAtype$Aircraft_Type)
 
@@ -116,6 +112,7 @@ dfAtype$Aircraft_Type[which(dfAtype$Aircraft_Type == 'B')] <- "Helicopter"
 dfAtype$Aircraft_Type[which(dfAtype$Aircraft_Type == 'C')] <- "Glider"
 dfAtype$Aircraft_Type[which(dfAtype$Aircraft_Type == 'J')] <- "Ultrlight"
 dfAtype$Aircraft_Type[which(dfAtype$Aircraft_Type == 'NULL')] <- "Military"
+dfAtype$Aircraft_Type[is.na(dfAtype$Aircraft_Type)] <- "Unknown"
 head(dfAtype)
 
 # dfAtype <- dfAtype[dfAtype$Year != 2020,]
@@ -123,14 +120,15 @@ head(dfAtype)
 saveRDS(dfAtype, file="rds_data/dfAtype.rds")
 
 aType <- dfAtype %>% group_by(Aircraft_Type) %>% 
-  summarise(Number = sum(Number)) # get data by year and time of day
-aType <- as.data.frame(aType) # convert to dataframe
+  summarise(Number = sum(Number)) 
+aType <- as.data.frame(aType)
 aType$Percentage <- round(aType$Number/sum(aType$Number)*100,2)
-
+title = paste0("Most common category of aircraft invloved in bird strikes<br>from ",
+               yearStart, " to ", yearEnd)
 p9 <- plot_ly(aType, x = ~Aircraft_Type, y = ~Number, type = 'bar',
              text = ~paste0(Number, ' (~', Percentage,'%)'), textposition = 'outside',
              hoverinfo = 'x', marker =list(color = rainbow(nrow(aType)))) %>%
-  layout(title = "Most common category of aircraft invloved in bird strikes",
+  layout(title = title, margin=list(t = 60),
          yaxis = list(title = "Number of bird strikes"),
          xaxis = list(title = "Category of Aircraft"))
 print(p9)
@@ -143,14 +141,8 @@ print(p9)
 
 #' AC_MASS	1 = 2,250 kg or less: 2 = ,2251-5700 kg: 3 = 5,701-27,000 kg: 
 #' 4 = 27,001-272,000 kg: 5 = above 272,000 kg
-#' 
-
-AC_MASS <- data.frame(matrix(ncol = 2, nrow = nrow(df))) # create an empty dataframe 
-# to store information about type of aircraft
+AC_MASS <- df %>% select(INCIDENT_YEAR, AC_MASS)
 colnames(AC_MASS) <- c('Year', 'Aircraft_Weight')
-
-AC_MASS$Aircraft_Weight <- df$AC_MASS
-AC_MASS$Year <- df$INCIDENT_YEAR
 
 AC_MASS[is.na(AC_MASS$Aircraft_Weight), 'Aircraft_Weight'] <- 'Unknown'
 
@@ -171,21 +163,22 @@ AC_MASS$Aircraft_Weight[which(AC_MASS$Aircraft_Weight == 4)] <- "27001-272000 kg
 AC_MASS$Aircraft_Weight[which(AC_MASS$Aircraft_Weight == 5)] <- "above 272000 kg"
 AC_MASS$Aircraft_Weight[which(AC_MASS$Aircraft_Weight == 'NULL')] <- "Unknown"
 
-# AC_MASS <- AC_MASS[AC_MASS$Year != 2020,]
 # save result as .rds file
 saveRDS(AC_MASS, file="rds_data/AC_MASS.rds")
 
 
 acw <- AC_MASS %>% group_by(Aircraft_Weight) %>% 
-  summarise(Number = sum(Number)) # get data by year and time of day
-acw <- as.data.frame(acw) # convert to dataframe
+  summarise(Number = sum(Number)) 
+acw <- as.data.frame(acw) # 
 acw$Percentage <- round(acw$Number/sum(acw$Number)*100,2)
 head(acw)
 
+title = paste0("Size(weight) of aircraft vs Number of bird strikes<br>from ",
+               yearStart, " to ", yearEnd)
 p10 <- plot_ly(acw, x = ~Aircraft_Weight, y = ~Number, type = 'bar',
              text = ~paste0(Number, ' (~', Percentage,'%)'), textposition = 'outside',
              hoverinfo = 'x', marker =list(color = rainbow(nrow(acw)))) %>%
-  layout(title = "Size of aircraft based on Weight vs Number of bird strikes",
+  layout(title = title, margin = list(t=60),
          yaxis = list(title = "Number of bird strikes"),
          xaxis = list(title = "Weight of the aircraft"))
 print(p10)
@@ -201,124 +194,130 @@ print(p10)
 civil <- subset(df, OPID != 'MIL', select = c('COST_REPAIRS_INFL_ADJ', 'COST_OTHER_INFL_ADJ',
                                 'DAMAGE_LEVEL', 'INCIDENT_YEAR', 'AC_MASS')) # subset data
 civil[,1:2][is.na(civil[,1:2])] <- 0 # replace NAs
-
 damageDollars <- sum(civil$COST_REPAIRS_INFL_ADJ) + sum(civil$COST_OTHER_INFL_ADJ)
 
 cat("Total cost of damage/repairs in case of civil aircraft (in USD):", damageDollars)
 
 ### civil aircraft
-class(civil)
-head(civil)
-names(civil)
 table(civil$DAMAGE_LEVEL)
-
-civi$DAMAGE_LEVEL[is.na(civi$DAMAGE_LEVEL)]
-
-civil$DAMAGE_LEVEL <- as.character(civil$DAMAGE_LEVEL)
-#civil <- civil[civil$DAMAGE_LEVEL %in% c("M", "M?", "S", "D", "N"),]
 
 civil <- civil %>% group_by(INCIDENT_YEAR, DAMAGE_LEVEL) %>% 
   summarise(Number = n()) # get data by year and DAMAGE classification
 
 civil <- as.data.frame(civil) # convert to dataframe
+colnames(civil) <- c('Year', 'Damage', 'Number')
+class(civil)
+head(civil)
+names(civil)
 
-civil$DAMAGE_LEVEL[which(civil$DAMAGE_LEVEL == 'N')] <- "No Damage"
-civil$DAMAGE_LEVEL[which(civil$DAMAGE_LEVEL == 'M?')] <- "Uncertain"
-civil$DAMAGE_LEVEL[which(civil$DAMAGE_LEVEL == 'M')] <- "Minor"
-civil$DAMAGE_LEVEL[which(civil$DAMAGE_LEVEL == 'S')] <- "Substantial"
-civil$DAMAGE_LEVEL[which(civil$DAMAGE_LEVEL == 'D')] <- "Destroyed"
+civil$Damage[which(civil$Damage == 'N')] <- "No Damage"
+civil$Damage[which(civil$Damage == 'M?')] <- "Uncertain"
+civil$Damage[which(civil$Damage == 'M')] <- "Minor"
+civil$Damage[which(civil$Damage == 'S')] <- "Substantial"
+civil$Damage[which(civil$Damage == 'D')] <- "Destroyed"
 # missing values/no reported damage level treated as no damage 
-civil$DAMAGE_LEVEL[is.na(civil$DAMAGE_LEVEL)] <- "No Damage" 
+civil$Damage[is.na(civil$Damage)] <- "No Damage" 
 
 # save result as .rds file
 saveRDS(civil, file="rds_data/civil.rds")
 
-civi <- civil %>% group_by(DAMAGE_LEVEL) %>% 
+civi <- civil %>% group_by(Damage) %>% 
   summarise(Number = sum(Number)) 
 civi <- as.data.frame(civi) 
+table(civi$Damage[is.na(civi$Damage)])
 
 # exlude no damage cases
-civi <- civi[which(civi$DAMAGE_LEVEL != "No Damage"),]
-head(civi)
+civi <- civi[which(civi$Damage != "No Damage"),]
 sum(civi$Number)
 sum(civil$Number)
-round(sum(civi$Number)/sum(civil$Number)*100,2)
 civi$Percentage <- round(civi$Number/sum(civil$Number)*100, 2)
 
-civi$DAMAGE_LEVEL <- factor(civi$DAMAGE_LEVEL, 
+civi$Damage <- factor(civi$Damage, 
                             levels = c("Uncertain", "Minor", "Substantial", 'Destroyed'))
 
 ap11 <- list(x = 'Minor', xref = 'x',
-             y = civi[civi$DAMAGE_LEVEL == 'Minor', 'Number'], yerf = 'y',
+             y = civi[civi$Damage == 'Minor', 'Number'], yerf = 'y',
              text = paste0('Percentage shown is <br>in respect of a total of <br>',
                            sum(civil$Number), ' bird strikes'),  align = 'left',
              showarrow = TRUE, arrowhead = 0, arrowwidth = 1.2,
-             ax = 150, ay = 20, bordercolor = 'green'
+             ax = 120, ay = 40, font = list(color ='white'), bgcolor = 'green'
 )
-
-p11 <- plot_ly(civi, x = ~DAMAGE_LEVEL, y = ~Number, type = 'bar',
+title = paste0("Cases of damage to civil aircraft<br>from ",
+               yearStart, " to ", yearEnd)
+p11 <- plot_ly(civi, x = ~Damage, y = ~Number, type = 'bar',
                text = ~paste0(Number, ' (~', Percentage,'%)'), textposition = 'outside',
                hoverinfo = 'x', marker =list(color = rainbow(nrow(civi)))) %>%
-  layout(title = "Cases of damage to civil aircraft", annotations = ap11,
+  layout(title = title, annotations = ap11, margin = list(t=60),
          xaxis = list(title = 'Damage level'),
          yaxis = list(title = "Number of cases"))
 print(p11)
 
 
 ###### military aircraft
-mili <- df[df$OPID == 'MIL', c('COST_REPAIRS_INFL_ADJ', 'COST_OTHER_INFL_ADJ',
+military <- df[df$OPID == 'MIL', c('COST_REPAIRS_INFL_ADJ', 'COST_OTHER_INFL_ADJ',
                                'DAMAGE_LEVEL', 'INCIDENT_YEAR', 'AC_MASS')]
-class(mili)
-head(mili)
-table(mili$DAMAGE_LEVEL)
-mili$DAMAGE_LEVEL <- as.character(mili$DAMAGE_LEVEL)
+class(military)
+head(military)
+table(military$DAMAGE_LEVEL)
+military$DAMAGE_LEVEL <- as.character(military$DAMAGE_LEVEL)
 
-mili <- mili %>% group_by(INCIDENT_YEAR, DAMAGE_LEVEL) %>% 
+military[,1:2][is.na(military[,1:2])] <- 0 # replace NAs
+damageDollarsM <- sum(military$COST_REPAIRS_INFL_ADJ) + sum(military$COST_OTHER_INFL_ADJ)
+
+cat("Total cost of damage/repairs in case of civil aircraft (in USD):", damageDollarsM)
+
+
+military <- military %>% group_by(INCIDENT_YEAR, DAMAGE_LEVEL) %>% 
   summarise(Number = n()) # get data by year and DAMAGE classification
+military <- as.data.frame(military) # convert to dataframe
+colnames(military) <- c('Year', 'Damage', 'Number')
+head(military)
 
-mili <- as.data.frame(mili) # convert to dataframe
+military$Damage[which(military$Damage == 'N')] <- "No Damage"
+military$Damage[which(military$Damage == 'D')] <- "Destroyed"
+military$Damage[which(military$Damage == 'M?')] <- "Uncertain"
+military$Damage[is.na(military$Damage)] <- "No Damage" 
 
-mili$DAMAGE_LEVEL[which(mili$DAMAGE_LEVEL == 'D')] <- "Destroyed"
-mili$DAMAGE_LEVEL[which(mili$DAMAGE_LEVEL == 'M?')] <- "Uncertain"
+sum(military$Number) + sum(civil$Number)
 
 # save result as .rds file
-saveRDS(mili, file="rds_data/mili.rds")
+saveRDS(military, file="rds_data/military.rds")
 
-mil <- mili %>% group_by(DAMAGE_LEVEL) %>% 
+
+mili <- military %>% group_by(Damage) %>% 
   summarise(Number = sum(Number)) 
-mil <- as.data.frame(mil) # convert to dataframe
+mili <- as.data.frame(mili) # 
 # exlude no damage cases
-mil <- mil[which(mil$DAMAGE_LEVEL != "N"),]
-mil
-sum(mil$Number)
+mili <- mili[which(mili$Damage != "No Damage"),]
+mili
 sum(mili$Number)
-round(sum(mil$Number)/sum(mili$Number)*100,2)
-mil$Percentage <- round(mil$Number/sum(mil$Number)*100, 2)
-mil
+sum(military$Number)
+round(sum(mili$Number)/sum(military$Number)*100,2)
+mili$Percentage <- round(mili$Number/sum(military$Number)*100, 2)
+mili
 
-p12 <- plot_ly(mil, x = ~DAMAGE_LEVEL, y = ~Number, type = 'bar',
+ap12 <- list(x = 'Class E', xref = 'x',
+             y = mili[mili$Damage == 'Class E', 'Number'], yerf = 'y',
+             text = paste0('Percentage shown is <br>in respect of a total of <br>',
+                           sum(military$Number), ' bird strikes'),  align = 'left',
+             showarrow = TRUE, arrowhead = 0, arrowwidth = 1.2,
+             ax = 120, ay = 40, font = list(color ='white'), bgcolor = 'green'
+)
+title = paste0("Cases of damage to military aircraft<br>from ",
+               yearStart, " to ", yearEnd)
+
+p12 <- plot_ly(mili, x = ~Damage, y = ~Number, type = 'bar',
                text = ~paste0(Number, ' (~', Percentage,'%)'), textposition = 'outside',
-               hoverinfo = 'x', marker =list(color = rainbow(nrow(mil)))) %>%
-  layout(title = "Cases of damage to military aircraft",
+               hoverinfo = 'x', marker =list(color = rainbow(nrow(mili)))) %>%
+  layout(title = title, annotations = ap12, margin = list(t=60),
          xaxis = list(title = 'Damage classifications of military aircraft'),
          yaxis = list(title = "Number of cases"))
 print(p12)
 
-
 ##################### Bird Species #####################################################
 
-bs <- data.frame(matrix(ncol = 4, nrow = nrow(df))) # create an empty dataframe to
-# store information about bird species involved
+bs <- df %>% select(INCIDENT_YEAR, SPECIES, SIZE, DAMAGE_LEVEL)
 colnames(bs) <- c('Year', 'Bird_Name', 'Bird_Size', 'Damage')
-
-bs$Year <- df$INCIDENT_YEAR
-bs$Bird_Name <- df$SPECIES
-bs$Bird_Size <- df$SIZE
-bs$Damage <- df$DAMAGE
-
-bs <- bs[complete.cases(bs),] # Remove NAs
-dim(bs)
-
 
 bs <- bs[bs$Bird_Name != 'Unknown bird - large',]
 bs <- bs[bs$Bird_Name != 'Unknown bird - medium',]
@@ -339,8 +338,6 @@ saveRDS(bs, file="rds_data/bs.rds")
 ###         Word Cloud on Bird Species Names
 n=200
 # # Wordcloud plot using wordcloud2()
-# getwd()
-# wordcloud2(w, color = "random-dark", figPath = "www/t.png")
 p13 <- wordcloud2(bs[1:n, ], color = "random-dark", size = .8,
                  fontWeight = 'bold', maxRotation = pi/3, rotateRatio = 0.45,
                  hoverFunction = NULL, shape = 'star')
@@ -350,24 +347,15 @@ print(p13)
 #' Classification of bird:
 #' Small:	Less than 1000 gm, Medium:	1 kg to 2kg, Large:	more than 2 kg
 
-birdMass <- data.frame(matrix(ncol = 3, nrow = nrow(df))) # create an empty dataframe 
-# to store information about the size of birds and damage
+birdMass <- df %>% select( INCIDENT_YEAR, SIZE, DAMAGE_LEVEL)
 colnames(birdMass) <- c('Year', 'b_weight', 'damage')
-
-birdMass$b_weight <- df$SIZE
-birdMass$Year <- df$INCIDENT_YEAR
-birdMass$damage <- df$DAMAGE
-# birdMass <- birdMass[complete.cases(birdMass$b_weight),] # Remove NAs
-
 class(birdMass)
 head(birdMass)
 unique(birdMass$b_weight)
 
 birdMass <- birdMass %>% group_by(Year, b_weight) %>% 
   summarise(Number = n()) 
-
 birdMass <- as.data.frame(birdMass) # convert to dataframe
-
 birdMass[is.na(birdMass$b_weight), "b_weight"] <- 'Uncertain'
 
 # save result as .rds file
@@ -381,88 +369,91 @@ bw$Percentage <- round(bw$Number/sum(bw$Number)*100, 2)
 bw$b_weight <- factor(bw$b_weight, levels = 
                         c('Small', 'Medium', 'Large', 'Uncertain'))
 
+title = paste0("Size of Bird vs Number of Incidents of bird strikes<br>from ",
+               yearStart, " to ", yearEnd)
 p14 <- plot_ly(bw, x = ~b_weight, y = ~Number, type = 'bar',
                text = ~paste0(Number, ' (~', Percentage,'%)'), textposition = 'outside',
                hoverinfo = 'x', marker =list(color = rainbow(nrow(bw)))) %>%
-  layout(title = "Size of Bird vs Number of Incidents of bird strikes",
+  layout(title = title, margin=list(t = 70),
          yaxis = list(title = "Number of bird strikes"),
          xaxis = list(title = "Size of Bird"))
 print(p14)
 
 
-
 # relation between bird size, aircraft size and amount of damage 
 
-
-civil1 <- data.frame(matrix(ncol = 4, nrow = nrow(df))) # create an empty dataframe 
-civil1 <- df[df$OPID != 'MIL', c('SIZE', 'AC_MASS', 'DAMAGE_LEVEL', 'INCIDENT_YEAR')] #subset data
-head(civil1)
-colnames(civil1) <- c('Bird_Size', 'Aircraft_Size', 'Damage', 'Year')
+birdCivilDmg <- df[df$OPID != 'MIL', c('SIZE', 'AC_MASS', 'DAMAGE_LEVEL', 'INCIDENT_YEAR')] #subset data
+head(birdCivilDmg)
+colnames(birdCivilDmg) <- c('Bird_Size', 'Aircraft_Size', 'Damage', 'Year')
 
 ### civil aircraft
-civil1$Damage <- as.character(civil1$Damage)
-table(civil1$Damage)
+birdCivilDmg$Damage <- as.character(birdCivilDmg$Damage)
+table(birdCivilDmg$Damage)
+table(birdCivilDmg$Bird_Size)
 
 # Expand damage classification code
-civil1$Damage[which(civil1$Damage == 'N')] <- "No Damage"
-civil1$Damage[which(civil1$Damage == 'D')] <- "Destroyed"
-civil1$Damage[which(civil1$Damage == 'S')] <- "Substantial"
-civil1$Damage[which(civil1$Damage == 'M')] <- "Minor"
-civil1$Damage[which(civil1$Damage == 'M?')] <- "Uncertain"
-# exlude no damage cases
-civil1 <- civil1[which(civil1$Damage != "No Damage"),]
-civil1 <- civil1[!is.na(civil1$Bird_Size),] # Remove NAs
-dim(civil1)
-# save result as .rds file
-saveRDS(civil1, file="rds_data/civil1.rds")
-head(civil1)
+birdCivilDmg$Damage[which(birdCivilDmg$Damage == 'N')] <- "No Damage"
+birdCivilDmg$Damage[which(birdCivilDmg$Damage == 'D')] <- "Destroyed"
+birdCivilDmg$Damage[which(birdCivilDmg$Damage == 'S')] <- "Substantial"
+birdCivilDmg$Damage[which(birdCivilDmg$Damage == 'M')] <- "Minor"
+birdCivilDmg$Damage[which(birdCivilDmg$Damage == 'M?')] <- "Uncertain"
+birdCivilDmg$Damage[is.na(birdCivilDmg$Damage)] <- "No Damage" 
 
-b_civil <- civil1 %>% group_by(Bird_Size, Aircraft_Size, Damage) %>%
+# exclude case with no damage and bird size unavailable 
+birdCivilDmg <- birdCivilDmg[which(birdCivilDmg$Damage != "No Damage"),]
+birdCivilDmg <- birdCivilDmg[!is.na(birdCivilDmg$Bird_Size),] 
+
+dim(birdCivilDmg)
+head(birdCivilDmg)
+# save result as .rds file
+saveRDS(birdCivilDmg, file="rds_data/birdCivilDmg.rds")
+
+b_c_dmg <- birdCivilDmg %>% group_by(Bird_Size, Aircraft_Size, Damage) %>%
   summarise(Number = n())
 
-b_civil <- as.data.frame(b_civil) # convert to dataframe
-head(b_civil)
-str(b_civil$Bird_Size)
-pt1 = "Cases of damage vs different sizes of Birds and Civil Aircraft"
-pt2 = "Each facet corresponds to a different bird size and"
-pt3 = "bars in facets correspond different sizes of aircraft.."
-
-p15 <- ggplot(data = b_civil, aes(x= Aircraft_Size, y = Number, fill = Damage)) + 
+b_c_dmg <- as.data.frame(b_c_dmg) # convert to dataframe
+head(b_c_dmg)
+b_c_dmg$Bird_Size <- factor(b_c_dmg$Bird_Size, levels = 
+                              c('Small', 'Medium', 'Large'))
+title = "Civil aircraft damage vs Bird size"
+# title = paste0("Civil aircraft damage vs Bird size<br>from ", yearStart, ' to ', yearEnd, '<br>')
+x = paste0("x-axis represents aircraft size and each subplot corresponds to a bird size")
+p15 <- ggplot(data = b_c_dmg, aes(x= Aircraft_Size, y = Number, fill = Damage)) + 
   geom_bar(position="dodge", stat="identity") + facet_wrap(~Bird_Size) +
-  theme_bw() + theme(plot.title = element_text(hjust = 0.5)) +
-  labs(title = pt1, x = paste(pt2, pt3, sep = " "), y = "Number of Incidents")
+  theme_bw() + labs(title = title, x = x, y = "Number of Incidents") +
+  theme(plot.title = element_text(hjust = 0.5))
 ggplotly(p15)
 
 
 ####### military aircraft
+birdMilDmg <- df[df$OPID == 'MIL', c('SIZE', 'AC_MASS', 'DAMAGE_LEVEL', 'INCIDENT_YEAR')] #subset data
+head(birdMilDmg)
+colnames(birdMilDmg) <- c('Bird_Size', 'Aircraft_Size', 'Damage', 'Year')
+birdMilDmg <- birdMilDmg[!is.na(birdMilDmg$Bird_Size),] # Remove NAs
 
-mili1 <- data.frame(matrix(ncol = 4, nrow = nrow(df))) # create an empty dataframe 
-mili1 <- df[df$OPID == 'MIL', c('SIZE', 'AC_MASS', 'DAMAGE_LEVEL', 'INCIDENT_YEAR')] #subset data
-head(mili1)
-colnames(mili1) <- c('Bird_Size', 'Aircraft_Size', 'Damage', 'Year')
-mili1 <- mili1[!is.na(mili1$Bird_Size),] # Remove NAs
+table(birdMilDmg$Damage)
+table(birdMilDmg$Bird_Size)
+table(birdMilDmg$Aircraft_Size)
 
-mili1$Damage <- as.character(mili1$Damage)
-table(mili1$Damage)
-
-# exlude no damage cases
-mili1 <- mili1[which(mili1$Damage != "N"),]
-mili1$Damage[which(mili1$Damage == 'D')] <- "Destroyed"
-mili1$Damage[which(mili1$Damage == 'M?')] <- "Uncertain"
+# exclude no damage cases
+birdMilDmg <- birdMilDmg[which(birdMilDmg$Damage != "N"),]
+birdMilDmg$Damage[which(birdMilDmg$Damage == 'D')] <- "Destroyed"
+birdMilDmg$Damage[which(birdMilDmg$Damage == 'M?')] <- "Uncertain"
 
 # save result as .rds file
-saveRDS(mil, file="rds_data/mili1.rds")
+saveRDS(birdMilDmg, file="rds_data/birdMilDmg.rds")
 
-b_mil <- mili1 %>% group_by(Bird_Size, Aircraft_Size, Damage) %>%
+b_m_dmg <- birdMilDmg %>% group_by(Bird_Size, Aircraft_Size, Damage) %>%
   summarise(Number = n())
-b_mil <- as.data.frame(b_mil) # convert to dataframe
-
-pt1 = "Cases of damage vs different sizes of Birds and Military Aircraft"
-pt2 = "Each facet corresponds to a different bird size and"
-pt3 = "bars in facets correspond different sizes of aircraft."
-
-p16 <- ggplot(data = b_mil, aes(x= Aircraft_Size, y = Number, fill = Damage)) + 
+b_m_dmg <- as.data.frame(b_m_dmg) # convert to dataframe
+b_m_dmg$Bird_Size <- factor(b_m_dmg$Bird_Size, levels = 
+         c('Small', 'Medium', 'Large'))
+title = "Military aircraft damage vs Bird size"
+# title = paste0("Civil aircraft damage vs Bird size<br>from ", yearStart, ' to ', yearEnd, '<br>')
+x = paste0("x-axis represents aircraft size and each subplot corresponds to a bird size")
+p16 <- ggplot(data = b_m_dmg, aes(x= Aircraft_Size, y = Number, fill = Damage)) + 
   geom_bar(position="dodge", stat="identity") + facet_wrap(~Bird_Size) +
   theme_bw() + theme(plot.title = element_text(hjust = 0.5)) +
-  labs(title = pt1, x = paste(pt2, pt3, sep = " "), y = "Number of Incidents")
+  labs(title = pt1, x = x, y = "Number of Incidents")
 ggplotly(p16)
+
