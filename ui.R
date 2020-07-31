@@ -1,3 +1,7 @@
+# Author: Amrik Singh
+# Project Title: Analysis of bird strikes reported in USA from 1990 to 2019
+# (FAA Wildlife Strike Database, from 1990 to 2019)
+
 library(shiny)
 library(shinythemes)
 
