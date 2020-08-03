@@ -133,7 +133,7 @@ bsMonth <- function(incidentMonths, yearStart, yearEnd){
   incidentMonths <- incidentMonths %>% filter(Year >= yearStart, Year <= yearEnd)
   incidentMonths$Year <- as.factor(incidentMonths$Year)
   labels <- c('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
-  title = paste0("Number of bird strike incident Vs Month<br>from ",
+  title = paste0("Number of bird strike incident per month<br>from ",
                  yearStart, " to ", yearEnd)
   p6 <- ggplot(data = incidentMonths, aes(x= Month, y = Incidents)) + 
     geom_line(aes(colour= Year)) + theme_minimal() +
@@ -156,7 +156,7 @@ todPie <- function(time_of_day, yearStart, yearEnd){
   tod <- time_of_day %>% group_by(Time) %>% 
     summarise(Number = sum(Number)) # get data by year and time of day
   tod <- as.data.frame(tod)
-  title = paste0("Time of the day and occurance of bird strike<br>from ",
+  title = paste0("Time of the day and likelihood of bird strike<br>for the period from ",
                  yearStart, " to ", yearEnd, "\n")
   p7 <- plot_ly(tod, labels = ~Time, values = ~Number, type = 'pie') %>%
     layout(title = title,  margin=list(t = 70),
@@ -172,8 +172,7 @@ todPie <- function(time_of_day, yearStart, yearEnd){
 # Plot p8: word cloud remarks
 wordsALL <- readRDS("rds_data/wordsALL.rds")
 
-cloud1 <- function(wordsALL, yearStart, yearEnd, n){
-  wordsALL <- wordsALL %>% filter(Year >= yearStart, Year <= yearEnd)
+cloud1 <- function(wordsALL, n){
   p8 <- wordcloud2(wordsALL[1:n, ], color = "random-dark", size = .8,
                    fontWeight = 'bold', maxRotation = pi/3, rotateRatio = 0.45,
                    hoverFunction = NULL, shape = 'diamond')
@@ -308,8 +307,7 @@ airMil <- function(military, yearStart, yearEnd){
 
 bs <- readRDS("rds_data/bs.rds")
 
-cloud2 <- function(bs, yearStart, yearEnd, n){
-  bs <- bs %>% filter(Year >= yearStart, Year <= yearEnd)
+cloud2 <- function(bs, n){
   # # Wordcloud plot using wordcloud2()
   p13 <- wordcloud2(bs[1:n, ], color = "random-dark", size = .8,
                     fontWeight = 'bold', maxRotation = pi/3, rotateRatio = 0.45,
@@ -318,6 +316,12 @@ cloud2 <- function(bs, yearStart, yearEnd, n){
 }
 # cloud2(bs, 300)
 
+# Table
+bsTable <- function(bs){head(bs)
+  row.names(bs) <- NULL
+  bs
+}
+
 
 #####@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 #####@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -325,7 +329,7 @@ cloud2 <- function(bs, yearStart, yearEnd, n){
 
 birdMass <- readRDS("rds_data/birdMass.rds")
 
-bsize <- function(birdMass, yearStart, yearEnd){
+bsize <- function(birdMass, size, yearStart, yearEnd){
   birdMass <- birdMass %>% filter(Year >= yearStart, Year <= yearEnd)
   
   bw <- birdMass %>% group_by(b_weight) %>% 
@@ -335,6 +339,9 @@ bsize <- function(birdMass, yearStart, yearEnd){
   bw$Percentage <- round(bw$Number/sum(bw$Number)*100, 2)
   bw$b_weight <- factor(bw$b_weight, levels = 
                           c('Small', 'Medium', 'Large', 'Uncertain'))
+  
+  bw <- bw[bw$b_weight %in% size,]
+  
   
   title = paste0("Size of Bird vs Number of Incidents of bird strikes<br>from ",
                  yearStart, " to ", yearEnd)
@@ -354,7 +361,7 @@ bsize <- function(birdMass, yearStart, yearEnd){
 # Plot p15: bird size vs civil aircraft damage
 birdCivilDmg <- readRDS("rds_data/birdCivilDmg.rds")
 
-birdCivil <- function(birdCivilDmg, yearStart, yearEnd){
+birdCivil <- function(birdCivilDmg, yearStart, yearEnd, bSize, cDam, aSize){
   birdCivilDmg <- birdCivilDmg %>% filter(Year >= yearStart, Year <= yearEnd)
   
   b_c_dmg <- birdCivilDmg %>% group_by(Bird_Size, Aircraft_Size, Damage) %>%
@@ -362,15 +369,23 @@ birdCivil <- function(birdCivilDmg, yearStart, yearEnd){
   b_c_dmg <- as.data.frame(b_c_dmg) # convert to dataframe
   b_c_dmg$Bird_Size <- factor(b_c_dmg$Bird_Size, levels = 
                                 c('Small', 'Medium', 'Large'))
+  
+  
+  b_c_dmg <- b_c_dmg[b_c_dmg$Bird_Size %in% bSize,]
+  b_c_dmg <- b_c_dmg[b_c_dmg$Damage %in% cDam,]
+  b_c_dmg <- b_c_dmg[b_c_dmg$Aircraft_Size %in% aSize,]
+  
+  
+  
   title = "Civil aircraft damage vs Bird size"
-  x = paste0("x-axis represents aircraft size and each subplot corresponds to a bird size")
+  x = "Aircraft size"
   p15 <- ggplot(data = b_c_dmg, aes(x= Aircraft_Size, y = Number, fill = Damage)) + 
     geom_bar(position="dodge", stat="identity") + facet_wrap(~Bird_Size) +
     theme_bw() + labs(title = title, x = x, y = "Number of Incidents") +
     theme(plot.title = element_text(hjust = 0.5))
   ggplotly(p15)
 }
-# birdCivil(birdCivilDmg, 2000, 2019)
+# birdCivil(birdCivilDmg, 1990, 2019)
 
 
 #####@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -378,7 +393,7 @@ birdCivil <- function(birdCivilDmg, yearStart, yearEnd){
 # Plot p16: bird size and military aircraft damage
 birdMilDmg <- readRDS("rds_data/birdMilDmg.rds")
 
-birdMili <- function(birdMilDmg, yearStart, yearEnd){
+birdMili <- function(birdMilDmg, yearStart, yearEnd, bSize, mDam, aSize){
   birdMilDmg <- birdMilDmg %>% filter(Year >= yearStart, Year <= yearEnd)
   
   b_m_dmg <- birdMilDmg %>% group_by(Bird_Size, Aircraft_Size, Damage) %>%
@@ -386,9 +401,15 @@ birdMili <- function(birdMilDmg, yearStart, yearEnd){
   b_m_dmg <- as.data.frame(b_m_dmg) # convert to dataframe
   b_m_dmg$Bird_Size <- factor(b_m_dmg$Bird_Size, levels = 
                                 c('Small', 'Medium', 'Large'))
+  
+  b_m_dmg <- b_m_dmg[b_m_dmg$Bird_Size %in% bSize,]
+  b_m_dmg <- b_m_dmg[b_m_dmg$Damage %in% cDam,]
+  b_m_dmg <- b_m_dmg[b_m_dmg$Aircraft_Size %in% aSize,]
+  
+  
   title = "Military aircraft damage vs Bird size"
   # title = paste0("Civil aircraft damage vs Bird size<br>from ", yearStart, ' to ', yearEnd, '<br>')
-  x = paste0("x-axis represents aircraft size and each subplot corresponds to a bird size")
+  x = "Aircraft size"
   p16 <- ggplot(data = b_m_dmg, aes(x= Aircraft_Size, y = Number, fill = Damage)) + 
     geom_bar(position="dodge", stat="identity") + facet_wrap(~Bird_Size) +
     theme_bw() + theme(plot.title = element_text(hjust = 0.5)) +
@@ -582,8 +603,8 @@ ullamco laboris nisi ut aliquip ex ea commodo consequat.
 #########################################3
 #########################################3
 
-backToTop <- function(){
-  actionButton("", "Back to top",
+backToTop <- function(id){
+  actionButton(id, "Back to top",
                icon = icon("paper-plane"),
                # style = "color:maroon", 
                onclick ="location.href='#Home';")

@@ -1,0 +1,13 @@
+name: BirdStrikeAnalysis
+title: BirdStrikeAnalysis
+username:
+account: amrik
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 2632719
+bundleId: 3462273
+url: https://amrik.shinyapps.io/BirdStrikeAnalysis/
+when: 1596267513.41486
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .gitattributes|.RData|accdbToCsv.R|Analysis1.R|Analysis2.R|Analysis3.R|README.md|database/birdStrikesAll.rds|database/read_me.xls|database/typos.csv|database/usaData.csv|database/USCarrier_TrafficData.csv

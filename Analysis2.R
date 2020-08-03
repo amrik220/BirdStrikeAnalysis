@@ -31,7 +31,7 @@ remarksCorpus = tm_map(remarksCorpus, removePunctuation)
 remarksCorpus = tm_map(remarksCorpus, removeNumbers)
 remarksCorpus = tm_map(remarksCorpus, removeWords, stopwords())
 remarksCorpus = tm_map(remarksCorpus, stemDocument)
-str(remarksCorpus)
+# str(remarksCorpus)
 
 # processing for wordCloud
 dtm = DocumentTermMatrix(remarksCorpus)

@@ -260,7 +260,7 @@ str(incidentMonths)
 
 # Plot the data
 labels <- c('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
-title = paste0("Number of bird strike incident Vs Month<br>from ",
+title = paste0("Number of bird strike incident per month<br>from ",
                yearStart, " to ", yearEnd)
 p6 <- ggplot(data = incidentMonths, aes(x= Month, y = Incidents)) + 
   geom_line(aes(colour= Year)) + theme_minimal() +
@@ -305,7 +305,7 @@ dim(time_of_day)
 tod <- time_of_day %>% group_by(Time) %>% 
   summarise(Number = sum(Number)) # get data by year and time of day
 tod <- as.data.frame(tod)
-title = paste0("Time of the day and occurance of bird strike<br>from ",
+title = paste0("Time of the day and likelihood of bird strike<br>for the period from ",
                yearStart, " to ", yearEnd)
 p7 <- plot_ly(tod, labels = ~Time, values = ~Number, type = 'pie') %>%
   layout(title = title, margin=list(t = 70),
